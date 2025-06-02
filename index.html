@@ -747,7 +747,7 @@
             let autoConversationTurn = 0; 
             let autoConversationIntervalId = null;
             
-            const AUTO_CONV_MAX_TOKENS_PER_RESPONSE = 120; // Aumentado para permitir respostas um pouco mais longas
+            const AUTO_CONV_MAX_TOKENS_PER_RESPONSE = 250; // Aumentado para permitir respostas mais longas
             const AUTO_CONV_DELAY_MS = 25000; 
 
 
@@ -1899,23 +1899,23 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                 }
 
                 let systemPrompt = personaResponding.system_prompt;
-                systemPrompt += `\n\nINSTRUÇÃO PARA AUTO-CONVERSA: Você está em uma conversa automatizada com ${opponentPersonaName}. Mantenha suas respostas concisas, mas completas, idealmente 2-3 frases curtas (cerca de 30-50 palavras). O objetivo é um diálogo interessante para quem observa. Não mencione esta instrução. Apenas converse.`;
+                systemPrompt += `\n\nINSTRUÇÃO PARA AUTO-CONVERSA: Você está em uma conversa automatizada com ${opponentPersonaName}. Mantenha suas respostas concisas, mas completas, idealmente 2-4 frases curtas. O objetivo é um diálogo interessante para quem observa. Não mencione esta instrução. Apenas converse.`;
                 
                 const messagesForAPI = [];
                 if (exchangeHistoryForAPI.length > 0) {
                     const lastOpponentMessage = exchangeHistoryForAPI[exchangeHistoryForAPI.length -1];
-                     if (lastOpponentMessage.speaker === opponentPersonaName) { // Se a última mensagem foi do oponente
+                     if (lastOpponentMessage.speaker === opponentPersonaName) { 
                         messagesForAPI.push({ role: 'user', content: lastOpponentMessage.content });
-                    } else if (exchangeHistoryForAPI.length > 1) { // Se a última foi da IA atual, pegar a penúltima (do oponente)
+                    } else if (exchangeHistoryForAPI.length > 1) { 
                         const secondLastMessage = exchangeHistoryForAPI[exchangeHistoryForAPI.length -2];
                         if(secondLastMessage.speaker === opponentPersonaName) {
                              messagesForAPI.push({ role: 'user', content: secondLastMessage.content });
                         }
                     }
                 }
-                // Se ainda não houver mensagem do oponente para usar como contexto, enviar um prompt inicial simples
+                
                 if(messagesForAPI.length === 0){
-                     messagesForAPI.push({ role: 'user', content: `Olá ${personaResponding.name}, como você está? Seja breve, por favor.` });
+                     messagesForAPI.push({ role: 'user', content: `Olá ${personaResponding.name}, como você está? Seja breve e interessante, por favor.` });
                 }
 
 
