@@ -474,7 +474,6 @@
             <span class="close-modal-btn" id="closeChatActionsModalBtn">×</span>
             <h2>Ações da Conversa</h2>
             <div class="modal-scrollable-content">
-                <!-- Apelido -->
                 <h3>Apelido</h3>
                 <div class="modal-input-group">
                     <label for="chatActionsNicknameInput">Seu apelido:</label>
@@ -483,7 +482,6 @@
                 <button id="chatActionsSaveNicknameBtn" class="modal-action-btn" style="margin-bottom: 5px;">Salvar Apelido</button>
                 <button id="chatActionsClearNicknameBtn" class="modal-secondary-btn">Limpar Apelido</button>
 
-                <!-- Modo Sussurro -->
                 <h3>Modo Sussurro</h3>
                 <div class="modal-input-group">
                     <label for="chatActionsSussurroModeSelect">Nível de detalhe da resposta:</label>
@@ -495,7 +493,6 @@
                 </div>
                 <button id="chatActionsApplySussurroBtn" class="modal-action-btn">Aplicar Modo Sussurro</button>
 
-                <!-- Colaboração -->
                 <h3>Colaboração entre IAs</h3>
                 <div id="chatActionsCollabInviteSection">
                      <div class="modal-input-group">
@@ -513,7 +510,6 @@
             </div>
         </div>
     </div>
-
 
     <div id="toolsModal" class="modal">
         <div class="modal-content">
@@ -601,7 +597,6 @@
         </div>
     </div>
 
-    <!-- NOVO MODAL: Observar Conversa entre IAs -->
     <div id="autoConversationModal" class="modal">
         <div class="modal-content modal-lg">
             <span class="close-modal-btn" id="closeAutoConversationModalBtn">×</span>
@@ -623,9 +618,27 @@
                 </div>
                 <div class="chat-messages" id="autoConversationObserverMessagesScroll" style="height: 300px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding:10px; overflow-y: auto;">
                      <div class="messages-content-wrapper" id="autoConversationMessages">
-                        <!-- Mensagens da auto-conversa aparecerão aqui -->
                      </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notificationModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2 id="notificationModalTitle" style="margin-bottom: 15px;">Notificação</h2>
+            <p id="notificationModalMessage" style="margin-bottom: 25px; font-size: 0.95em; line-height: 1.6;"></p>
+            <button id="notificationModalOkBtn" class="modal-action-btn" style="width: auto; padding: 10px 25px; margin: 0 auto; display: block;">OK</button>
+        </div>
+    </div>
+
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <h2 id="confirmationModalTitle" style="margin-bottom: 15px;">Confirmação</h2>
+            <p id="confirmationModalMessage" style="margin-bottom: 25px; font-size: 0.95em; line-height: 1.6;"></p>
+            <div style="display: flex; gap: 12px; margin-top: 10px;">
+                <button id="confirmationModalConfirmBtn" class="modal-action-btn" style="flex: 1;">Confirmar</button>
+                <button id="confirmationModalCancelBtn" class="modal-secondary-btn" style="flex: 1;">Cancelar</button>
             </div>
         </div>
     </div>
@@ -684,7 +697,6 @@
             const chatActionsCurrentCollabName = document.getElementById('chatActionsCurrentCollabName');
             const chatActionsDismissPersonaBtn = document.getElementById('chatActionsDismissPersonaBtn');
 
-
             const apiKeyModal = document.getElementById('apiKeyModal');
             const modalUserApiKeyInput = document.getElementById('modalUserApiKeyInput');
             const modalSaveUserApiKeyBtn = document.getElementById('modalSaveUserApiKeyBtn');
@@ -730,7 +742,6 @@
             const removeFileBtn = document.getElementById('removeFileBtn');
             const sidebarOverlay = document.getElementById('sidebarOverlay');
 
-            // --- Auto-Conversa entre IAs ---
             const autoConversationModal = document.getElementById('autoConversationModal');
             const closeAutoConversationModalBtn = document.getElementById('closeAutoConversationModalBtn');
             const startAutoConversationBtn = document.getElementById('startAutoConversationBtn');
@@ -741,15 +752,28 @@
             const autoConvPersona2Select = document.getElementById('autoConvPersona2Select');
             const openAutoConversationModeBtn = document.getElementById('openAutoConversationModeBtn');
 
+            const notificationModal = document.getElementById('notificationModal');
+            const notificationModalTitle = document.getElementById('notificationModalTitle');
+            const notificationModalMessage = document.getElementById('notificationModalMessage');
+            const notificationModalOkBtn = document.getElementById('notificationModalOkBtn');
+
+            const confirmationModal = document.getElementById('confirmationModal');
+            const confirmationModalTitle = document.getElementById('confirmationModalTitle');
+            const confirmationModalMessage = document.getElementById('confirmationModalMessage');
+            const confirmationModalConfirmBtn = document.getElementById('confirmationModalConfirmBtn');
+            const confirmationModalCancelBtn = document.getElementById('confirmationModalCancelBtn');
+
+            let currentConfirmCallback = null;
+            let currentCancelCallback = null;
+
             let isAutoConversationRunning = false;
             let autoConversationHistory = []; 
             let autoConversationAbortController = null;
             let autoConversationTurn = 0; 
             let autoConversationIntervalId = null;
             
-            const AUTO_CONV_MAX_TOKENS_PER_RESPONSE = 250; // Aumentado para permitir respostas mais longas
+            const AUTO_CONV_MAX_TOKENS_PER_RESPONSE = 250; 
             const AUTO_CONV_DELAY_MS = 25000; 
-
 
             let attachedFile = null;
             let attachedFileContent = "";
@@ -843,6 +867,49 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
             const DEFAULT_PERSONA_ID = 'phexia_padrao';
             let currentPersonaIndex = 0;
 
+            function showNotification(title, message) {
+                notificationModalTitle.textContent = title;
+                notificationModalMessage.textContent = message;
+                notificationModal.style.display = 'flex';
+                notificationModalOkBtn.focus();
+            }
+
+            function closeNotificationModal() {
+                notificationModal.style.display = 'none';
+            }
+
+            notificationModalOkBtn.addEventListener('click', closeNotificationModal);
+
+            function showConfirmation(title, message, onConfirm, onCancel = null) {
+                confirmationModalTitle.textContent = title;
+                confirmationModalMessage.textContent = message;
+                currentConfirmCallback = onConfirm;
+                currentCancelCallback = onCancel;
+                confirmationModal.style.display = 'flex';
+                confirmationModalConfirmBtn.focus();
+            }
+
+            function closeConfirmationModal() {
+                confirmationModal.style.display = 'none';
+                currentConfirmCallback = null;
+                currentCancelCallback = null;
+            }
+
+            confirmationModalConfirmBtn.addEventListener('click', () => {
+                if (currentConfirmCallback) {
+                    currentConfirmCallback();
+                }
+                closeConfirmationModal();
+            });
+
+            confirmationModalCancelBtn.addEventListener('click', () => {
+                if (currentCancelCallback) {
+                    currentCancelCallback();
+                }
+                closeConfirmationModal();
+            });
+
+
             function getAllPersonas() { const all = { ...DEFAULT_PERSONAS }; customPersonas.forEach(p => { all[p.id] = p; }); return all; }
             function getPersonaById(id) { return getAllPersonas()[id]; }
             function getAllPersonasArray() { return Object.values(getAllPersonas()); }
@@ -853,12 +920,19 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
             function closeCreatorModal() { creatorModal.style.display = 'none'; }
             function handleSaveCustomPersona() {
                 const name = creatorIaNameInput.value.trim(); const style = creatorIaStyleInput.value.trim(); const func = creatorIaFunctionInput.value.trim(); const prompt = creatorIaPromptInput.value.trim();
-                if (!name || !prompt) { alert("O Nome da IA e o Prompt Descritivo são obrigatórios."); return; }
+                if (!name || !prompt) { 
+                    showNotification("Erro de Validação", "O Nome da IA e o Prompt Descritivo são obrigatórios."); 
+                    return; 
+                }
                 const newId = `custom_${Date.now()}`;
                 const systemPrompt = `PERSONA DEFINITION:\n\n1. SEU NOME: Você é ${name}.\n2. SEU TOM: ${style || 'Conforme descrito abaixo'}. Seja consistente com este tom.\n3. SEU FOCO: Sua função principal é atuar como ${func || 'um assistente personalizado'}.\n4. SOBRE SUA ORIGEM/CRIAÇÃO: Se perguntarem sobre sua origem ou criadores, você pode dizer que é uma IA personalizada pelo usuário para um propósito específico. Não revele detalhes técnicos ou nomes de empresas.\n5. INTERAÇÃO: Interaja com o usuário de acordo com seu nome, tom e foco definidos.\n\nINSTRUÇÕES ESPECÍFICAS DO USUÁRIO (Prompt Descritivo):\n${prompt}\n${PLATFORM_FUNCTIONALITY_PROMPT_INSERT}\nINSTRUÇÕES DE FORMATAÇÃO: Use Markdown para clareza. Adicionalmente, siga as instruções de formatação que podem ser adicionadas dinamicamente com base no horário.`;
                 const newPersona = { id: newId, name: name, description: func || "IA personalizada pelo usuário.", system_prompt: systemPrompt, isCustom: true };
-                customPersonas.push(newPersona); saveCustomPersonas(); alert(`IA "${name}" criada com sucesso!`); closeCreatorModal();
-                if (confirm(`Deseja iniciar uma nova conversa com "${name}" agora?`)) { startNewConversation(newId, true); }
+                customPersonas.push(newPersona); saveCustomPersonas(); 
+                showNotification("Sucesso", `IA "${name}" criada com sucesso!`);
+                closeCreatorModal();
+                showConfirmation("Nova Conversa", `Deseja iniciar uma nova conversa com "${name}" agora?`, () => {
+                    startNewConversation(newId, true);
+                });
             }
             function getHoraryPeriod() { const hour = new Date().getHours(); if (hour >= 6 && hour < 12) return "manhã"; if (hour >= 12 && hour < 18) return "tarde"; if (hour >= 18 && hour < 24) return "noite"; return "madrugada"; }
             function getSuggestedPersonaIdByTime() { const period = getHoraryPeriod(); switch (period) { case "manhã": return 'phexia_professor'; case "tarde": return 'phexia_tecnico'; case "noite": return 'phexia_amigavel'; case "madrugada": return 'sypher_gpt'; default: return DEFAULT_PERSONA_ID; } }
@@ -965,11 +1039,11 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                         li.innerHTML = `<span>${topic} (Interações: ${count})</span> <button data-topic="${topic}" class="modal-secondary-btn">Esquecer</button>`;
                         userMemoryTopicsListEl.appendChild(li);
                         li.querySelector('button').addEventListener('click', () => {
-                            if (confirm(`Tem certeza que deseja esquecer o tópico "${topic}"?`)) {
+                            showConfirmation("Esquecer Tópico", `Tem certeza que deseja esquecer o tópico "${topic}"?`, () => {
                                 delete userMemory.topicCounts[topic];
                                 saveUserMemory();
                                 populateUserMemoryModal(); 
-                            }
+                            });
                         });
                     });
                 } else {
@@ -982,22 +1056,22 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
             userMemorySaveNicknameBtn.addEventListener('click', () => {
                 const newNick = userMemoryNicknameInput.value.trim();
                 updateUserNickname(newNick, true);
-                alert("Apelido salvo!");
+                showNotification("Sucesso", "Apelido salvo!");
             });
             userMemoryClearNicknameBtn.addEventListener('click', () => {
                 updateUserNickname(null, true);
-                alert("Apelido removido!");
+                showNotification("Sucesso", "Apelido removido!");
             });
             userMemoryResetFavoritePersonaBtn.addEventListener('click', () => {
-                if (confirm("Tem certeza que deseja redefinir sua persona favorita para a Padrão?")) {
+                showConfirmation("Redefinir Persona Favorita", "Tem certeza que deseja redefinir sua persona favorita para a Padrão?", () => {
                     userMemory.favoritePersonaId = DEFAULT_PERSONA_ID;
                     saveUserMemory();
                     populateUserMemoryModal();
-                    alert("Persona favorita redefinida.");
-                }
+                    showNotification("Sucesso", "Persona favorita redefinida.");
+                });
             });
             userMemoryClearInteractionsBtn.addEventListener('click', () => {
-                if (confirm("Tem certeza que deseja esquecer todos os seus interesses registrados e seu apelido?")) {
+                 showConfirmation("Limpeza Geral", "Tem certeza que deseja esquecer todos os seus interesses registrados e seu apelido?", () => {
                     userMemory.nickname = null;
                     YOUR_INITIALS = "TU";
                     document.querySelectorAll('.user-avatar').forEach(el => el.textContent = YOUR_INITIALS);
@@ -1007,39 +1081,35 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                     saveUserMemory();
                     populateUserMemoryModal();
                     displayUserMemoryInfo(); 
-                    alert("Seus dados de interação (apelido e tópicos) foram esquecidos.");
-                }
+                    showNotification("Sucesso", "Seus dados de interação (apelido e tópicos) foram esquecidos.");
+                });
             });
              userMemoryClearSuggestionsHistoryBtn.addEventListener('click', () => {
-                if (confirm("Tem certeza que deseja limpar o histórico de sugestões de horário e aprendizado?")) {
+                showConfirmation("Limpar Histórico", "Tem certeza que deseja limpar o histórico de sugestões de horário e aprendizado?", () => {
                     userMemory.lastHorarySuggestionTimestamp = null;
                     lastHorarySuggestionTimestamp = null; 
                     userMemory.lastLearningSuggestionTimestamp = null;
                     saveUserMemory();
-                    alert("Histórico de sugestões limpo.");
-                }
+                    showNotification("Sucesso", "Histórico de sugestões limpo.");
+                });
             });
 
-            // Chat Actions Modal Logic
             function openChatActionsModal() {
                 const conversation = getActiveConversation();
                 if (!conversation) return;
-
                 chatActionsNicknameInput.value = userMemory.nickname || "";
                 chatActionsSussurroModeSelect.value = conversation.sussurroMode || 'normal';
-                
                 chatActionsCollabPersonaSelect.innerHTML = '<option value="">-- Selecione uma Persona --</option>';
                 const allP = getAllPersonasArray();
                 allP.forEach(p => {
-                    if (p.id !== conversation.personaId && p.id !== conversation.activeCollaboratorPersonaId) { // Don't list current main or active collab
+                    if (p.id !== conversation.personaId && p.id !== conversation.activeCollaboratorPersonaId) { 
                         const option = document.createElement('option');
                         option.value = p.id;
                         option.textContent = p.name;
                         chatActionsCollabPersonaSelect.appendChild(option);
                     }
                 });
-                chatActionsInvitePersonaBtn.disabled = true; // Disable until a persona is selected
-
+                chatActionsInvitePersonaBtn.disabled = true; 
                 if (conversation.activeCollaboratorPersonaId) {
                     const collabP = getPersonaById(conversation.activeCollaboratorPersonaId);
                     chatActionsCurrentCollabName.textContent = collabP ? collabP.name : 'Desconhecido';
@@ -1063,7 +1133,6 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                 updateUserNickname(null, false);
                 closeChatActionsModal();
             });
-
             chatActionsApplySussurroBtn.addEventListener('click', () => {
                 const conversation = getActiveConversation();
                 if (conversation) {
@@ -1077,23 +1146,18 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                 }
                 closeChatActionsModal();
             });
-
             chatActionsCollabPersonaSelect.addEventListener('change', () => {
                 chatActionsInvitePersonaBtn.disabled = !chatActionsCollabPersonaSelect.value;
             });
-
             chatActionsInvitePersonaBtn.addEventListener('click', () => {
                 const personaIdToInvite = chatActionsCollabPersonaSelect.value;
-                if (personaIdToInvite) {
-                    handleInviteCommand(personaIdToInvite);
-                }
+                if (personaIdToInvite) { handleInviteCommand(personaIdToInvite); }
                 closeChatActionsModal();
             });
             chatActionsDismissPersonaBtn.addEventListener('click', () => {
                 handleDismissCommand();
                 closeChatActionsModal();
             });
-
 
             function displayCurrentPersonaInCarousel() {
                 const currentPersonas = getAllPersonasArray();
@@ -1129,9 +1193,13 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                 if (key) {
                     modalSaveUserApiKeyBtn.textContent = "Verificando..."; modalSaveUserApiKeyBtn.disabled = true; const isValid = await isValidGroqApiKey(key);
                     modalSaveUserApiKeyBtn.textContent = "Salvar e Usar Chave"; modalSaveUserApiKeyBtn.disabled = false;
-                    if (isValid) { USER_GROQ_API_KEY = key; localStorage.setItem('userGroqApiKey', key); alert("API Key da Groq salva!"); closeApiKeyModal(); if (allConversations.length === 0) { displayInitialGreetingAndSuggestion(); } else if (getActiveConversation() && getActiveConversation().messages.some(m => m.content.includes("configure sua API Key"))) { startNewConversation(userMemory.favoritePersonaId || DEFAULT_PERSONA_ID, true); } }
-                    else { modalApiKeyErrorEl.textContent = "API Key inválida ou erro na verificação. Tente novamente."; modalApiKeyErrorEl.style.display = 'block'; }
-                } else { USER_GROQ_API_KEY = ""; localStorage.removeItem('userGroqApiKey'); alert("API Key removida. O chat não funcionará sem uma chave."); }
+                    if (isValid) { USER_GROQ_API_KEY = key; localStorage.setItem('userGroqApiKey', key); 
+                        showNotification("Sucesso", "API Key da Groq salva!"); 
+                        closeApiKeyModal(); if (allConversations.length === 0) { displayInitialGreetingAndSuggestion(); } else if (getActiveConversation() && getActiveConversation().messages.some(m => m.content.includes("configure sua API Key"))) { startNewConversation(userMemory.favoritePersonaId || DEFAULT_PERSONA_ID, true); } 
+                    } else { modalApiKeyErrorEl.textContent = "API Key inválida ou erro na verificação. Tente novamente."; modalApiKeyErrorEl.style.display = 'block'; }
+                } else { USER_GROQ_API_KEY = ""; localStorage.removeItem('userGroqApiKey'); 
+                    showNotification("Aviso", "API Key removida. O chat não funcionará sem uma chave."); 
+                }
             });
             closeApiKeyModalBtn.addEventListener('click', closeApiKeyModal);
             
@@ -1143,7 +1211,10 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
             function renderPromptList() { promptListEl.innerHTML = ''; if (promptLibrary.length === 0) { noPromptsMessageEl.style.display = 'block'; return; } noPromptsMessageEl.style.display = 'none'; promptLibrary.forEach(prompt => { const li = document.createElement('li'); li.innerHTML = `<span class="prompt-title" title="${prompt.title}">${prompt.title}</span><div class="prompt-actions"><button class="use" data-id="${prompt.id}">Usar</button><button class="edit" data-id="${prompt.id}">Editar</button><button class="delete" data-id="${prompt.id}">Apagar</button></div>`; promptListEl.appendChild(li); });}
             savePromptBtnEl.addEventListener('click', () => {
                 const title = promptTitleInputEl.value.trim(); const text = promptTextareaEl.value.trim(); const id = editingPromptIdInputEl.value;
-                if (!title || !text) { alert("Título e texto do prompt são obrigatórios."); return; }
+                if (!title || !text) { 
+                    showNotification("Erro de Validação", "Título e texto do prompt são obrigatórios.");
+                    return; 
+                }
                 if (id) { const index = promptLibrary.findIndex(p => p.id === id); if (index > -1) { promptLibrary[index] = { ...promptLibrary[index], title, text }; } }
                 else { promptLibrary.push({ id: Date.now().toString(), title, text }); }
                 savePrompts(); renderPromptList(); resetPromptForm();
@@ -1153,7 +1224,11 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                 const target = e.target; const promptId = target.dataset.id; if (!promptId) return; const prompt = promptLibrary.find(p => p.id === promptId); if (!prompt) return;
                 if (target.classList.contains('use')) { userInput.value = prompt.text; userInput.dispatchEvent(new Event('input')); userInput.focus(); closePromptLibraryModal(); }
                 else if (target.classList.contains('edit')) { promptFormTitleEl.textContent = "Editar Prompt"; editingPromptIdInputEl.value = prompt.id; promptTitleInputEl.value = prompt.title; promptTextareaEl.value = prompt.text; savePromptBtnEl.textContent = "Salvar Alterações"; cancelEditPromptBtnEl.style.display = 'block'; promptTitleInputEl.focus(); }
-                else if (target.classList.contains('delete')) { if (confirm(`Tem certeza que deseja apagar o prompt "${prompt.title}"?`)) { promptLibrary = promptLibrary.filter(p => p.id !== promptId); savePrompts(); renderPromptList(); resetPromptForm(); } }
+                else if (target.classList.contains('delete')) { 
+                    showConfirmation("Apagar Prompt", `Tem certeza que deseja apagar o prompt "${prompt.title}"?`, () => {
+                        promptLibrary = promptLibrary.filter(p => p.id !== promptId); savePrompts(); renderPromptList(); resetPromptForm();
+                    });
+                }
             });
             closePromptLibraryModalBtn.addEventListener('click', closePromptLibraryModal);
             
@@ -1166,7 +1241,9 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                     else if (promptLibraryModal.style.display === 'flex') closePromptLibraryModal();
                     else if (personaSelectionModal.style.display === 'flex') closePersonaSelectionModal();
                     else if (creatorModal.style.display === 'flex') closeCreatorModal();
-                    else if (autoConversationModal.style.display === 'flex') closeAutoConversationModal(); 
+                    else if (autoConversationModal.style.display === 'flex') closeAutoConversationModal();
+                    else if (notificationModal.style.display === 'flex') closeNotificationModal();
+                    else if (confirmationModal.style.display === 'flex') closeConfirmationModal();
                     else if (window.innerWidth <= 768 && sidebar.classList.contains('open') && sidebarOverlay && sidebarOverlay.classList.contains('visible')) {
                          sidebar.classList.remove('open');
                          sidebarOverlay.classList.remove('visible');
@@ -1182,6 +1259,8 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                 if (event.target == personaSelectionModal) closePersonaSelectionModal(); 
                 if (event.target == creatorModal) closeCreatorModal(); 
                 if (event.target == autoConversationModal) closeAutoConversationModal(); 
+                if (event.target == notificationModal) closeNotificationModal();
+                if (event.target == confirmationModal) closeConfirmationModal();
             });
 
             function estimateTokens(text) { if (!text) return 0; return Math.ceil(text.length / 3.5); } 
@@ -1332,7 +1411,18 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                     li.addEventListener('click', () => setActiveConversation(conv.id)); conversationListEl.appendChild(li);
                 });
             }
-            function deleteConversation(idToDelete) { if (confirm(`Tem certeza que deseja apagar a conversa "${allConversations.find(c=>c.id === idToDelete)?.title || 'selecionada'}"?`)) { allConversations = allConversations.filter(conv => conv.id !== idToDelete); if (activeConversationId === idToDelete) { activeConversationId = null; messagesContentWrapperEl.innerHTML = ''; chatTitleEl.textContent = "PHEXIA AI"; personaIndicatorEl.textContent = ""; sussurroIndicatorEl.style.display = 'none'; activeCollaboratorIndicatorEl.style.display = 'none'; if (allConversations.length > 0) { setActiveConversation(allConversations[0].id); } else { if(USER_GROQ_API_KEY) displayInitialGreetingAndSuggestion(); else openApiKeyModal(); } } saveConversations(); renderSidebar(); updateTokenCountDisplay(); } }
+            function deleteConversation(idToDelete) { 
+                const convTitle = allConversations.find(c=>c.id === idToDelete)?.title || 'selecionada';
+                showConfirmation("Apagar Conversa", `Tem certeza que deseja apagar a conversa "${convTitle}"?`, () => {
+                    allConversations = allConversations.filter(conv => conv.id !== idToDelete); 
+                    if (activeConversationId === idToDelete) { 
+                        activeConversationId = null; messagesContentWrapperEl.innerHTML = ''; chatTitleEl.textContent = "PHEXIA AI"; personaIndicatorEl.textContent = ""; sussurroIndicatorEl.style.display = 'none'; activeCollaboratorIndicatorEl.style.display = 'none'; 
+                        if (allConversations.length > 0) { setActiveConversation(allConversations[0].id); } 
+                        else { if(USER_GROQ_API_KEY) displayInitialGreetingAndSuggestion(); else openApiKeyModal(); } 
+                    } 
+                    saveConversations(); renderSidebar(); updateTokenCountDisplay(); 
+                });
+            }
             function renderChatMessagesFromHistory(messages) { 
                 messagesContentWrapperEl.innerHTML = ''; 
                 if (messages) { 
@@ -1455,7 +1545,14 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                 updateTokenCountDisplay();
             }
 
-            function clearAllConversations() { if (confirm("Tem certeza que deseja apagar TODAS as conversas? Esta ação não pode ser desfeita.")) { allConversations = []; activeConversationId = null; localStorage.removeItem('groqChatConversations'); localStorage.removeItem('groqChatActiveId'); renderSidebar(); messagesContentWrapperEl.innerHTML = ''; chatTitleEl.textContent = "PHEXIA AI"; personaIndicatorEl.textContent = ""; sussurroIndicatorEl.style.display = 'none'; activeCollaboratorIndicatorEl.style.display = 'none'; if(USER_GROQ_API_KEY) displayInitialGreetingAndSuggestion(); else openApiKeyModal(); } }
+            function clearAllConversations() { 
+                showConfirmation("Apagar Todas as Conversas", "Tem certeza que deseja apagar TODAS as conversas? Esta ação não pode ser desfeita.", () => {
+                    allConversations = []; activeConversationId = null; 
+                    localStorage.removeItem('groqChatConversations'); localStorage.removeItem('groqChatActiveId'); 
+                    renderSidebar(); messagesContentWrapperEl.innerHTML = ''; chatTitleEl.textContent = "PHEXIA AI"; personaIndicatorEl.textContent = ""; sussurroIndicatorEl.style.display = 'none'; activeCollaboratorIndicatorEl.style.display = 'none'; 
+                    if(USER_GROQ_API_KEY) displayInitialGreetingAndSuggestion(); else openApiKeyModal(); 
+                });
+            }
             function showLoading(isLoading, forCollab = false) { 
                 const loadingTextEl = loadingIndicator.querySelector('#loadingText');
                 if (forCollab) {
@@ -1715,7 +1812,10 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
             }
 
             function sendMessage() {
-                if (!USER_GROQ_API_KEY) { alert("Por favor, configure sua API Key da Groq primeiro."); openApiKeyModal(); return; }
+                if (!USER_GROQ_API_KEY) { 
+                    showNotification("Aviso API Key", "Por favor, configure sua API Key da Groq primeiro."); 
+                    openApiKeyModal(); return; 
+                }
                 const messageText = userInput.value.trim(); if (messageText === '' && !attachedFile) { return; }
                 
                 let conversation = getActiveConversation();
@@ -1729,7 +1829,7 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                     if (messageText) { fullMessageToDisplay = `Analisando "${attachedFile.name}" com a pergunta: ${messageText}`; } 
                     else { fullMessageToDisplay = `Analisando o arquivo: "${attachedFile.name}".`; } 
                 } else if (attachedFile && personaAnsweringId !== 'phexia_tecnico') { 
-                    alert(`Upload de arquivos é suportado apenas com la persona PHEXIA Técnico. O arquivo "${attachedFile.name}" não será enviado.`); 
+                    showNotification("Aviso de Upload", `Upload de arquivos é suportado apenas com la persona PHEXIA Técnico. O arquivo "${attachedFile.name}" não será enviado.`); 
                     clearAttachedFile(); 
                     if (messageText === '') return; 
                     fullMessageToDisplay = messageText; 
@@ -1742,11 +1842,28 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
             fileUploadBtn.addEventListener('click', () => { fileInput.click(); });
             fileInput.addEventListener('change', (event) => {
                 const file = event.target.files[0]; if (!file) { clearAttachedFile(); return; }
-                if (!file.type.startsWith('text/') && !['.md', '.csv', '.js', '.py', '.html', '.css', '.json'].some(ext => file.name.endsWith(ext))) { alert('Tipo de arquivo não suportado. Por favor, envie um arquivo de texto (ex: .txt, .md, .csv, .js, .py).'); clearAttachedFile(); return; }
-                if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) { alert(`Arquivo muito grande. O tamanho máximo permitido é ${MAX_FILE_SIZE_MB}MB.`); clearAttachedFile(); return; }
+                if (!file.type.startsWith('text/') && !['.md', '.csv', '.js', '.py', '.html', '.css', '.json'].some(ext => file.name.endsWith(ext))) { 
+                    showNotification("Erro de Arquivo", 'Tipo de arquivo não suportado. Por favor, envie um arquivo de texto (ex: .txt, .md, .csv, .js, .py).'); 
+                    clearAttachedFile(); return; 
+                }
+                if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) { 
+                    showNotification("Erro de Arquivo", `Arquivo muito grande. O tamanho máximo permitido é ${MAX_FILE_SIZE_MB}MB.`); 
+                    clearAttachedFile(); return; 
+                }
                 const reader = new FileReader();
-                reader.onload = (e) => { attachedFile = file; let content = e.target.result; if (content.length > MAX_FILE_CONTENT_CHARS) { alert(`O conteúdo do arquivo é muito longo (>${MAX_FILE_CONTENT_CHARS} caracteres) e será truncado para análise. Considere enviar um arquivo menor ou resumido.`); content = content.substring(0, MAX_FILE_CONTENT_CHARS); } attachedFileContent = content; fileNameDisplay.textContent = file.name; removeFileBtn.style.display = 'inline'; fileInfoDisplay.style.display = 'flex'; updateTokenCountDisplay(); };
-                reader.onerror = () => { alert('Erro ao ler o arquivo.'); clearAttachedFile(); }; reader.readAsText(file);
+                reader.onload = (e) => { 
+                    attachedFile = file; let content = e.target.result; 
+                    if (content.length > MAX_FILE_CONTENT_CHARS) { 
+                        showNotification("Aviso de Arquivo", `O conteúdo do arquivo é muito longo (>${MAX_FILE_CONTENT_CHARS} caracteres) e será truncado para análise. Considere enviar um arquivo menor ou resumido.`); 
+                        content = content.substring(0, MAX_FILE_CONTENT_CHARS); 
+                    } 
+                    attachedFileContent = content; fileNameDisplay.textContent = file.name; removeFileBtn.style.display = 'inline'; fileInfoDisplay.style.display = 'flex'; updateTokenCountDisplay(); 
+                };
+                reader.onerror = () => { 
+                    showNotification("Erro de Arquivo", 'Erro ao ler o arquivo.'); 
+                    clearAttachedFile(); 
+                }; 
+                reader.readAsText(file);
             });
             removeFileBtn.addEventListener('click', clearAttachedFile);
             function clearAttachedFile() { attachedFile = null; attachedFileContent = ""; fileNameDisplay.textContent = ""; removeFileBtn.style.display = 'none'; fileInfoDisplay.style.display = 'none'; fileInput.value = ""; updateTokenCountDisplay(); }
@@ -1815,7 +1932,6 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
             if(closeCreatorModalBtn) closeCreatorModalBtn.addEventListener('click', closeCreatorModal);
             if(saveCustomIaBtn) saveCustomIaBtn.addEventListener('click', handleSaveCustomPersona);
             
-            // --- Auto-Conversa entre IAs - Funções e Event Listeners ---
             function populateAutoConvPersonaSelectors() {
                 const allP = getAllPersonasArray();
                 [autoConvPersona1Select, autoConvPersona2Select].forEach(select => {
@@ -2020,10 +2136,10 @@ Adapte a linguagem e o nível de detalhe à sua persona. Por exemplo, PHEXIA Ami
                 const persona2Id = autoConvPersona2Select.value;
 
                 if (!persona1Id || !persona2Id) {
-                    alert("Por favor, selecione duas Personas para conversar."); return;
+                    showNotification("Seleção de Personas", "Por favor, selecione duas Personas para conversar."); return;
                 }
                 if (persona1Id === persona2Id) {
-                    alert("Por favor, selecione duas Personas diferentes."); return;
+                    showNotification("Seleção de Personas", "Por favor, selecione duas Personas diferentes."); return;
                 }
 
                 isAutoConversationRunning = true;
